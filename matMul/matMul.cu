@@ -42,7 +42,7 @@ __global__ void matMul_gpu(const int *d_x, const int *d_y, int *d_z, int N) {
     }
 
 }
-const int BLOCK_SIZE = 16;
+
 __global__ void matMul_gpu2(const int* d_x,const int *d_y,int* d_z, int N) {
     int bx = blockIdx.x, by = blockIdx.y;
     int tx = threadIdx.x, ty = threadIdx.y;
