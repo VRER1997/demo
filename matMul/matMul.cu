@@ -10,7 +10,7 @@
 
 using namespace std;
 
-const int N = 10000;
+const int N = 1024;
 const int EPS = 1e-6;
 const int BLOCKSIZE = 16;
 
@@ -26,7 +26,6 @@ void matMul_cpu(const int *h_x, const int *h_y, int *h_z, int N) {
         }
     }
 }
-
 
 __global__ void matMul_gpu(const int *d_x, const int *d_y, int *d_z, int N) {
 
@@ -57,14 +56,14 @@ __global__ void matMul_gpu2(const int* d_x,const int *d_y,int* d_z, int N) {
 
     int sum = 0;
     for (int a = aBegin,b = bBegin; a <= aEnd; a += aStep,b += bStep) {
-        __shared__ int X[BLOCK_SIZE][BLOCK_SIZE];
-        __shared__ int Y[BLOCK_SIZE][BLOCK_SIZE];
+        __shared__ int X[BLOCKSIZE][BLOCKSIZE];
+        __shared__ int Y[BLOCKSIZE][BLOCKSIZE];
 
         X[ty][tx] = d_x[a + N*ty + tx];
         Y[ty][tx] = d_y[b + N*ty + tx];
         __syncthreads();
 
-        for (int k = 0; k < BLOCK_SIZE; ++k) {
+        for (int k = 0; k < BLOCKSIZE; ++k) {
             sum += X[ty][k]*Y[k][tx];
         }
         __syncthreads();
