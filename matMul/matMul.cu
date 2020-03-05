@@ -10,11 +10,11 @@
 
 using namespace std;
 
-const int N = 1024;
+const int N = 100;
 const int EPS = 1e-6;
 const int BLOCKSIZE = 16;
 
-void matMul_cpu(const int *h_x, const int *h_y, int *h_z, int N) {
+void matMul_cpu(const int *h_x, const int *h_y, int *h_g, int N) {
     int sum = 0;
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < N; ++j) {
@@ -22,7 +22,7 @@ void matMul_cpu(const int *h_x, const int *h_y, int *h_z, int N) {
             for (int z = 0; z < N; z++) {
                 sum += h_x[i*N+z] * h_y[j+z*N];
             }
-            h_z[i*N+j] = sum;
+            h_g[i*N+j] = sum;
         }
     }
 }
@@ -73,11 +73,11 @@ __global__ void matMul_gpu2(const int* d_x,const int *d_y,int* d_z, int N) {
     d_z[id] = sum;
 }
 
-bool check(const int *h_z, const int *h_zz) {
+bool check(const int *h_g, const int *h_gz) {
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < N; ++j) {
-            if (fabs(h_z[i*N+j] - h_zz[i*N+j]) > EPS){
-                cout << "error: " << h_z[i*N + j] << " NOT EQUAL " << h_zz[i*N+j] << endl;
+            if (fabs(h_g[i*N+j] - h_gz[i*N+j]) > EPS){
+                cout << "error: " << h_g[i*N + j] << " NOT EQUAL " << h_gz[i*N+j] << endl;
                 return false;
             }
         }
@@ -85,18 +85,27 @@ bool check(const int *h_z, const int *h_zz) {
     return true;
 }
 
-int main() {
+void test(int N) {
+
     int M = sizeof(int) * N * N;
     int *h_x = (int*)malloc(M);
     int *h_y = (int*)malloc(M);
-    int *h_z = (int*)malloc(M);
-    int *h_zz = (int*)malloc(M);
-    int *h_zzz = (int*)malloc(M);
 
-    for (int i = 0; i < N*N; ++i) {
+    int *h_z = (int*)malloc(M); // for cpu1
+    int *h_g = (int*)malloc(M); // for gpu2
+    int *h_gg = (int*)malloc(M); // for gpu2
+
+    for (int i = 0; i < N*N; i++) {
         h_x[i] = 1;
         h_y[i] = 1;
     }
+
+    //CPU1
+    auto start = chrono::steady_clock::now();
+    if(N < 1025) matMul_cpu(h_x, h_y, h_z, N);
+    //cout << "hzzz: " << h_gzz[0] << endl;
+    auto end = chrono::steady_clock::now();
+    auto cpuTime = chrono::duration_cast<chrono::milliseconds>(end-start).count();
 
     int *d_x, *d_y, *d_z, *d_zz;
     cudaMalloc(&d_x, M);
@@ -115,26 +124,34 @@ int main() {
     TimerGPU timer(0);
     matMul_gpu<<<grid, block>>> (d_x, d_y, d_z, N);
     double gpuTime = timer.read();
-    cudaMemcpy(h_z, d_z, M, cudaMemcpyDeviceToHost);
-    cout << "hz: " << h_z[0] << endl;
+    cudaMemcpy(h_g, d_z, M, cudaMemcpyDeviceToHost);
+    //cout << "hz: " << h_g[0] << endl;
 
     //GPU2
     TimerGPU timer2(0);
     matMul_gpu2<<<grid, block>>> (d_x, d_y, d_zz, N);
     double gpuTime2 = timer2.read();
-    cudaMemcpy(h_zz, d_zz, M, cudaMemcpyDeviceToHost);
-    cout << "hzz: " << h_zz[0] << endl;
-    //CPU
-    auto start = chrono::steady_clock::now();
-    if(N < 1000) matMul_cpu(h_x, h_y, h_zzz, N);
-    cout << "hzzz: " << h_zzz[0] << endl;
-    auto end = chrono::steady_clock::now();
-    auto cpuTime = chrono::duration_cast<chrono::microseconds>(end-start).count();
+    cudaMemcpy(h_gg, d_zz, M, cudaMemcpyDeviceToHost);
+    cout << "hzz: " << h_gg[0] << endl;
 
-    bool isRight = check(h_z, h_zz);
+    bool isRight = check(h_g, h_gg);
 
-    printf("Result: %s  CPUTime: %ld ms   GPUTime: %f ms  GPUTime2: %f ms \n", isRight ? "Same!!!" : "Wrong...",
+    printf("Num: %d   Result: %s  CPUTime: %ld ms   GPUTime: %f ms  GPUTime2: %f ms \n", N, isRight ? "Same!!!" : "Wrong...",
             cpuTime, gpuTime, gpuTime2);
 
-    return 0;
+    free(h_x);
+    free(h_y);
+    free(h_z);
+
+    cudaFree(h_x);
+    cudaFree(h_y);
+    cudaFree(h_z);
+    cudaFree(h_g);
+    cudaFree(h_gg);
+}
+
+int main () {
+    test(128);
+    test(1024);
+    test(10240);
 }
