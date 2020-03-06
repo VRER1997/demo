@@ -1,0 +1,6 @@
+Num: 128   Reuslt: Right!!!   CPUTime2: 14 ms   CPUTime3: 356 ms
+Num: 1024   Reuslt: Right!!!   CPUTime2: 12561 ms   CPUTime3: 0 ms
+
+Num: 128   Result: Same!!!  CPUTime: 8 ms   GPUTime: 0.079040 ms  GPUTime2: 0.042336 ms
+Num: 1024   Result: Same!!!  CPUTime: 12660 ms   GPUTime: 36.108768 ms  GPUTime2: 14.217824 ms
+Num: 10240   Result: Same!!!  CPUTime: 0 ms   GPUTime: 47981.894531 ms  GPUTime2: 13036.882812 ms
